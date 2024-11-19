@@ -18,8 +18,13 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 # Öffne die Moodle-Login-Seite
 driver.get(moodle_url)
 
+<<<<<<< HEAD
 # Warten, bis die Seite geladen ist
 time.sleep(3)  # Wartezeit anpassen, je nach Ladegeschwindigkeit
+=======
+# Warten, bis das Eingabefeld für den Einschreibeschlüssel erscheint
+time.sleep(30)  # Warten auf die Seite, anpassen je nach Ladezeit
+>>>>>>> a1d57665aa5ac16b6307320c491c16644f207677
 
 # Finde das Eingabefeld für den Anmeldenamen/E-Mail
 username_field = driver.find_element(By.ID, "username")

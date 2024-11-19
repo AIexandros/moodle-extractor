@@ -4,6 +4,7 @@ webdriver-manager
 
 
 
+
 #Zum installieren der Abhängigkeiten:
 #pip install -r requirements.txt
 
