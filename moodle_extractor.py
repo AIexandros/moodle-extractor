@@ -55,6 +55,7 @@ time.sleep(5)
 # Durchlaufe alle Moodle-Links der Kurse mit Evaluierungswunsch
 for index, row in courses_to_evaluate.iterrows():
     moodle_link = row['Moodle-Link']
+    enrolment_key = row['Einschreibeschluessel']
     print(f"Öffne Moodle-Link: {moodle_link}")
 
     # Öffne die Kursseite
@@ -63,8 +64,16 @@ for index, row in courses_to_evaluate.iterrows():
     # Optional: Warten bis die Seite geladen ist
     time.sleep(5)
 
-    # Finde und klicke auf den Button "Teilnehmer*Innen"
+    # Prüfe, ob die Seite ein Einschreibeschlüsselfeld enthält und fülle es aus
     try:
+        enrolment_field = driver.find_element(By.XPATH, "//input[@type='password' and contains(@id, 'enrolpassword')]")
+        enrolment_field.send_keys(enrolment_key)
+        enrolment_field.send_keys(Keys.RETURN)
+
+        # Optional: Warten bis die Seite geladen ist
+        time.sleep(5)
+
+        # Finde und klicke auf den Button "Teilnehmer*Innen"
         participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
         participants_button.click()
 
@@ -82,7 +91,7 @@ for index, row in courses_to_evaluate.iterrows():
             for row in rows[1:]:  # Überspringe den Header
                 cols = row.find_elements(By.TAG_NAME, "td")
                 if len(cols) >= 3:
-                    vorname_nachname = cols[0].text.strip()[:-10]  # Entferne die letzten 10 Zeichen
+                    vorname_nachname = cols[0].text.strip().replace(" auswählen", "")  # Entferne "auswählen"
                     email = cols[1].text.strip()
                     writer.writerow([vorname_nachname, email])
                     print(f"Name: {vorname_nachname}, E-Mail: {email}")
