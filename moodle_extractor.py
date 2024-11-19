@@ -56,5 +56,16 @@ participants_button.click()
 # Optional: Warten bis die Seite geladen ist
 time.sleep(5)
 
+# Alle Teilnehmer mit Vor- und Nachname sowie E-Mail-Adresse ausgeben
+participants_table = driver.find_element(By.TAG_NAME, "table")
+rows = participants_table.find_elements(By.TAG_NAME, "tr")
+
+for row in rows[1:]:  # Überspringe den Header
+    cols = row.find_elements(By.TAG_NAME, "td")
+    if len(cols) >= 3:
+        vorname_nachname = cols[0].text.strip()
+        email = cols[2].text.strip()
+        print(f"Name: {vorname_nachname}, E-Mail: {email}")
+
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
 # driver.quit()
