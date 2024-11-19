@@ -38,5 +38,3 @@ time.sleep(5)
 
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
 # driver.quit()
-=======
->>>>>>> 8722097ed98db368825e06104d8b5fd2a6438c99
