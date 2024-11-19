@@ -3,14 +3,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from dotenv import load_dotenv
+import os
 import time
+
+# Lade Umgebungsvariablen aus der .env-Datei
+load_dotenv()
+
+# Anmeldedaten aus Umgebungsvariablen beziehen
+username = os.getenv("MOODLE_USERNAME")
+password = os.getenv("MOODLE_PASSWORD")
 
 # URL der Moodle-Login-Seite
 moodle_url = "https://moodle.hs-hannover.de/login/index.php"
-
-# Deine Anmeldedaten
-username = ""  # Ersetze durch deinen Anmeldenamen oder E-Mail
-password = ""  # Ersetze durch dein Passwort
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
