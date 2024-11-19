@@ -72,7 +72,11 @@ for index, row in courses_to_evaluate.iterrows():
 
         # Optional: Warten bis die Seite geladen ist
         time.sleep(5)
+    except:
+        # Falls bereits eingeschrieben, einfach fortfahren
+        pass
 
+    try:
         # Finde und klicke auf den Button "Teilnehmer*Innen"
         participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
         participants_button.click()
