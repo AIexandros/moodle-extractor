@@ -49,5 +49,12 @@ driver.get(course_url)
 # Optional: Warten bis die Seite geladen ist
 time.sleep(5)
 
+# Finde und klicke auf den Button "Teilnehmer*Innen"
+participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
+participants_button.click()
+
+# Optional: Warten bis die Seite geladen ist
+time.sleep(5)
+
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
 # driver.quit()
