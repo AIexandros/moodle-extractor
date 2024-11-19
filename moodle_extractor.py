@@ -9,26 +9,48 @@ import time
 # URL der Moodle-Seite und Kurs-Link
 moodle_url = "https://moodle.hs-hannover.de"
 kurs_link = "/course/view.php?id=27849"
-einschreibeschluessel = ""
+benutzername = "dein_benutzername"  # Deinen Moodle-Benutzernamen hier einfügen
+passwort = "dein_passwort"           # Dein Moodle-Passwort hier einfügen
+einschreibeschluessel = ""           # Einschreibeschlüssel, falls erforderlich
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-# Öffne Moodle und gehe zum Kurs
+# Öffne Moodle und gehe zur Login-Seite
+driver.get(moodle_url)
+
+# Warten, bis die Login-Felder sichtbar sind
+time.sleep(30)  # Anpassen je nach Ladezeit der Seite
+
+# Finde die Eingabefelder für den Login und fülle sie aus
+username_field = driver.find_element(By.ID, "username")
+password_field = driver.find_element(By.ID, "password")
+
+username_field.send_keys(benutzername)
+password_field.send_keys(passwort)
+
+# Absenden des Login-Formulars
+password_field.send_keys(Keys.RETURN)
+
+# Warten, bis die Login-Seite verarbeitet ist und die Moodle-Startseite angezeigt wird
+time.sleep(50)
+
+# Öffne den gewünschten Kurs
 driver.get(moodle_url + kurs_link)
 
-# Warten, bis das Eingabefeld für den Einschreibeschlüssel erscheint
-time.sleep(3)  # Warten auf die Seite, anpassen je nach Ladezeit
+# Warten, bis das Einschreibeschlüsselfeld erscheint (falls erforderlich)
+time.sleep(30)
 
-# Finde das Eingabefeld für den Einschreibeschlüssel und gebe ihn ein
-einschreibefeld = driver.find_element(By.ID, "enrol_password")  # Annahme: Das ID-Attribut des Feldes ist 'enrol_password'
-einschreibefeld.send_keys(einschreibeschluessel)
+try:
+    # Falls der Kurs einen Einschreibeschlüssel benötigt, gib diesen ein
+    einschreibefeld = driver.find_element(By.ID, "enrol_password")  # Anpassen, wenn nötig
+    einschreibefeld.send_keys(einschreibeschluessel)
+    einschreibefeld.send_keys(Keys.RETURN)
 
-# Absenden des Formulars
-einschreibefeld.send_keys(Keys.RETURN)
-
-# Warten, bis die Seite mit den Teilnehmern geladen ist
-time.sleep(5)  # Anpassbar je nach Ladegeschwindigkeit der Seite
+    # Warte auf die Bestätigung der Einschreibung
+    time.sleep(5)
+except:
+    print("Kein Einschreibeschlüssel benötigt oder Feld nicht gefunden.")
 
 # Holen der HTML-Seite nach dem Einschreiben
 html_content = driver.page_source
@@ -38,7 +60,7 @@ soup = BeautifulSoup(html_content, 'html.parser')
 
 # Angenommene Struktur der Teilnehmerliste: Extrahiere Teilnehmer-Daten aus der Tabelle
 participants = []
-table = soup.find('table', {'id': 'participants_table'})  # Stelle sicher, dass dies die richtige ID ist
+table = soup.find('table', {'id': 'participants_table'})  # Passe die ID an, falls nötig
 
 if table:
     rows = table.find_all('tr')[1:]  # Überspringe den Header
@@ -57,8 +79,8 @@ if table:
             })
 
 # Ausgabe der extrahierten Teilnehmer
-#for participant in participants:
-    #print(participant)
+for participant in participants:
+    print(participant)
 
-# Schließe den Browser
-#driver.quit()
+# Schließe den Browser (auskommentieren, falls du den Browser offen halten möchtest)
+# driver.quit()
