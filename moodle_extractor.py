@@ -16,6 +16,8 @@ password = os.getenv("MOODLE_PASSWORD")
 
 # URL der Moodle-Login-Seite
 moodle_url = "https://moodle.hs-hannover.de/login/index.php"
+# URL des Moodle-Kurses
+course_url = "https://moodle.hs-hannover.de/course/view.php?id=27849"
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -37,6 +39,12 @@ password_field.send_keys(password)
 # Finde und drücke den Login-Button
 login_button = driver.find_element(By.ID, "loginbtn")
 login_button.click()
+
+# Optional: Warten bis die Seite geladen ist
+time.sleep(5)
+
+# Öffne die Kursseite
+driver.get(course_url)
 
 # Optional: Warten bis die Seite geladen ist
 time.sleep(5)
