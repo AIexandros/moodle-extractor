@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup
 import time
 
 # URL der Moodle-Seite und Kurs-Link
-moodle_url = "https://deine-moodle-url.de"
-kurs_link = "/path-to-deinen-kurs"
-einschreibeschluessel = "deinEinschreibeschluessel"
+moodle_url = "https://moodle.hs-hannover.de"
+kurs_link = "/course/view.php?id=27849"
+einschreibeschluessel = ""
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -57,8 +57,8 @@ if table:
             })
 
 # Ausgabe der extrahierten Teilnehmer
-for participant in participants:
-    print(participant)
+#for participant in participants:
+    #print(participant)
 
 # Schließe den Browser
-driver.quit()
+#driver.quit()
