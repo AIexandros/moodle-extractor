@@ -1,64 +1,42 @@
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from bs4 import BeautifulSoup
 import time
 
-# URL der Moodle-Seite und Kurs-Link
-moodle_url = "https://moodle.hs-hannover.de"
-kurs_link = "/course/view.php?id=27849"
-einschreibeschluessel = ""
+# URL der Moodle-Login-Seite
+moodle_url = "https://moodle.hs-hannover.de/login/index.php"
+
+# Deine Anmeldedaten
+username = ""  # Ersetze durch deinen Anmeldenamen oder E-Mail
+password = ""  # Ersetze durch dein Passwort
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-# Öffne Moodle und gehe zum Kurs
-driver.get(moodle_url + kurs_link)
+# Öffne die Moodle-Login-Seite
+driver.get(moodle_url)
 
+# Warten, bis die Seite geladen ist
+time.sleep(3)  # Wartezeit anpassen, je nach Ladegeschwindigkeit
 # Warten, bis das Eingabefeld für den Einschreibeschlüssel erscheint
-time.sleep(3)  # Warten auf die Seite, anpassen je nach Ladezeit
+time.sleep(30)  # Warten auf die Seite, anpassen je nach Ladezeit
 
-# Finde das Eingabefeld für den Einschreibeschlüssel und gebe ihn ein
-einschreibefeld = driver.find_element(By.ID, "enrol_password")  # Annahme: Das ID-Attribut des Feldes ist 'enrol_password'
-einschreibefeld.send_keys(einschreibeschluessel)
+# Finde das Eingabefeld für den Anmeldenamen/E-Mail
+username_field = driver.find_element(By.ID, "username")
+username_field.send_keys(username)
 
-# Absenden des Formulars
-einschreibefeld.send_keys(Keys.RETURN)
+# Finde das Eingabefeld für das Passwort
+password_field = driver.find_element(By.ID, "password")
+password_field.send_keys(password)
 
-# Warten, bis die Seite mit den Teilnehmern geladen ist
-time.sleep(5)  # Anpassbar je nach Ladegeschwindigkeit der Seite
+# Finde und drücke den Login-Button
+login_button = driver.find_element(By.ID, "loginbtn")
+login_button.click()
 
-# Holen der HTML-Seite nach dem Einschreiben
-html_content = driver.page_source
+# Optional: Warten bis die Seite geladen ist
+time.sleep(5)
 
-# BeautifulSoup verwenden, um die Teilnehmer zu extrahieren
-soup = BeautifulSoup(html_content, 'html.parser')
-
-# Angenommene Struktur der Teilnehmerliste: Extrahiere Teilnehmer-Daten aus der Tabelle
-participants = []
-table = soup.find('table', {'id': 'participants_table'})  # Stelle sicher, dass dies die richtige ID ist
-
-if table:
-    rows = table.find_all('tr')[1:]  # Überspringe den Header
-    for row in rows:
-        cols = row.find_all('td')
-        if len(cols) > 0:
-            vorname = cols[0].text.strip()
-            nachname = cols[1].text.strip()
-            email = cols[2].text.strip()
-            status = cols[3].text.strip()
-            participants.append({
-                'Vorname': vorname,
-                'Nachname': nachname,
-                'Email': email,
-                'Status': status
-            })
-
-# Ausgabe der extrahierten Teilnehmer
-#for participant in participants:
-    #print(participant)
-
-# Schließe den Browser
-#driver.quit()
+# Schließe den Browser nach der Anmeldung (falls gewünscht)
+# driver.quit()
