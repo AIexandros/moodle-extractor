@@ -1,6 +1,7 @@
 selenium
 beautifulsoup4
 webdriver-manager
+pandas
 
 
 #Zum installieren der Abhängigkeiten:
