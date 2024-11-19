@@ -42,31 +42,37 @@ login_button = driver.find_element(By.ID, "loginbtn")
 login_button.click()
 
 # Optional: Warten bis die Seite geladen ist
-time.sleep(2)
+time.sleep(5)
 
 # Öffne die Kursseite
 driver.get(course_url)
 
 # Optional: Warten bis die Seite geladen ist
-time.sleep(2)
+time.sleep(5)
 
 # Finde und klicke auf den Button "Teilnehmer*Innen"
 participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
 participants_button.click()
 
 # Optional: Warten bis die Seite geladen ist
-time.sleep(2)
+time.sleep(5)
 
 # Alle Teilnehmer mit Vor- und Nachname sowie E-Mail-Adresse ausgeben
 participants_table = driver.find_element(By.TAG_NAME, "table")
 rows = participants_table.find_elements(By.TAG_NAME, "tr")
 
-for row in rows[1:]:  # Überspringe den Header
-    cols = row.find_elements(By.TAG_NAME, "td")
-    if len(cols) >= 3:
-        vorname_nachname = cols[0].text.strip()[:-10]  # Entferne die letzten 10 Zeichen
-        email = cols[1].text.strip()
-        print(f"Name: {vorname_nachname}, E-Mail: {email}")
+# CSV-Datei erstellen und die Teilnehmerdaten speichern
+with open('teilnehmerliste.csv', mode='w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    writer.writerow(["Vorname Nachname", "E-Mail"])
+    
+    for row in rows[1:]:  # Überspringe den Header
+        cols = row.find_elements(By.TAG_NAME, "td")
+        if len(cols) >= 3:
+            vorname_nachname = cols[0].text.strip()[:-10]  # Entferne die letzten 10 Zeichen
+            email = cols[1].text.strip()
+            writer.writerow([vorname_nachname, email])
+            print(f"Name: {vorname_nachname}, E-Mail: {email}")
 
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
 # driver.quit()
