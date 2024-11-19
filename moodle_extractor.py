@@ -64,7 +64,7 @@ for row in rows[1:]:  # Überspringe den Header
     cols = row.find_elements(By.TAG_NAME, "td")
     if len(cols) >= 3:
         vorname_nachname = cols[0].text.strip()
-        email = cols[2].text.strip()
+        email = cols[1].text.strip()
         print(f"Name: {vorname_nachname}, E-Mail: {email}")
 
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
