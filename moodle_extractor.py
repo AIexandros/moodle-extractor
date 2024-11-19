@@ -76,8 +76,8 @@ for index, row in courses_to_evaluate.iterrows():
         # Falls bereits eingeschrieben, einfach fortfahren
         pass
 
+    # Finde und klicke auf den Button "Teilnehmer*Innen"
     try:
-        # Finde und klicke auf den Button "Teilnehmer*Innen"
         participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
         participants_button.click()
 
@@ -85,20 +85,32 @@ for index, row in courses_to_evaluate.iterrows():
         time.sleep(5)
 
         # Alle Teilnehmer mit Vor- und Nachname sowie E-Mail-Adresse ausgeben
-        participants_table = driver.find_element(By.TAG_NAME, "table")
-        rows = participants_table.find_elements(By.TAG_NAME, "tr")
-
         with open(f'participants_{index}.csv', mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["Vorname Nachname", "E-Mail"])
 
-            for row in rows[1:]:  # Überspringe den Header
-                cols = row.find_elements(By.TAG_NAME, "td")
-                if len(cols) >= 3:
-                    vorname_nachname = cols[0].text.strip().replace(" auswählen", "")  # Entferne "auswählen"
-                    email = cols[1].text.strip()
-                    writer.writerow([vorname_nachname, email])
-                    print(f"Name: {vorname_nachname}, E-Mail: {email}")
+            while True:
+                participants_table = driver.find_element(By.TAG_NAME, "table")
+                rows = participants_table.find_elements(By.TAG_NAME, "tr")
+
+                for row in rows[1:]:  # Überspringe den Header
+                    cols = row.find_elements(By.TAG_NAME, "td")
+                    if len(cols) >= 3:
+                        vorname_nachname = cols[0].text.strip().replace(" auswählen", "")  # Entferne "auswählen"
+                        email = cols[1].text.strip()
+                        writer.writerow([vorname_nachname, email])
+                        print(f"Name: {vorname_nachname}, E-Mail: {email}")
+
+                # Prüfe, ob es eine nächste Seite gibt und navigiere dorthin
+                try:
+                    next_page = driver.find_element(By.XPATH, "//a[contains(@class, 'page-link') and contains(., '»')]")
+                    next_page.click()
+
+                    # Optional: Warten bis die Seite geladen ist
+                    time.sleep(5)
+                except:
+                    # Wenn es keine nächste Seite gibt, beende die Schleife
+                    break
     except Exception as e:
         print(f"Fehler beim Zugriff auf die Teilnehmerliste: {e}")
 
