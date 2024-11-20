@@ -22,6 +22,9 @@ file_path = 'Link-DB-549_records-20241118_1037.csv'
 # CSV-Datei laden
 data = pd.read_csv(file_path)
 
+# Duplikate im Feld "Name der Vorlesung" entfernen
+data = data.drop_duplicates(subset=['Name der Vorlesung'])
+
 # Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
 courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
 
