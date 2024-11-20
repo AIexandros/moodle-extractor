@@ -59,6 +59,7 @@ time.sleep(5)
 for index, row in courses_to_evaluate.iterrows():
     moodle_link = row['Moodle-Link']
     enrolment_key = row['Einschreibeschluessel']
+    course_name = row['Name der Vorlesung']
     print(f"Öffne Moodle-Link: {moodle_link}")
 
     # Öffne die Kursseite
@@ -88,7 +89,8 @@ for index, row in courses_to_evaluate.iterrows():
         time.sleep(5)
 
         # Alle Teilnehmer mit Vor- und Nachname sowie E-Mail-Adresse ausgeben
-        with open(f'participants_{index}.csv', mode='w', newline='') as file:
+        csv_filename = f'participants_{course_name}.csv'
+        with open(csv_filename, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["Vorname Nachname", "E-Mail"])
 
