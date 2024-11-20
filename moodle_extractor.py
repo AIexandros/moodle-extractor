@@ -17,7 +17,7 @@ username = os.getenv("MOODLE_USERNAME")
 password = os.getenv("MOODLE_PASSWORD")
 
 # Pfad zur CSV-Datei mit den Kursinformationen
-file_path = 'Link-DB-549_records-20241118_1037.csv'
+file_path = 'Link-DB-549_records-20241120_2038.csv'
 
 # CSV-Datei laden
 data = pd.read_csv(file_path)
