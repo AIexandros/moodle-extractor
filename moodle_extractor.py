@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 import time
 import pandas as pd
+import shutil
 
 # Lade Umgebungsvariablen aus der .env-Datei
 load_dotenv()
@@ -17,6 +18,11 @@ password = os.getenv("MOODLE_PASSWORD")
 
 # Pfad zur CSV-Datei mit den Kursinformationen
 file_path = 'Link-DB-549_records-20241203_1938.csv'
+
+# Ordner für die Teilnehmerlisten erstellen
+output_dir = "moodle_participants_lists"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # CSV-Datei laden
 data = pd.read_csv(file_path)
@@ -105,6 +111,11 @@ for index, row in courses_to_evaluate.iterrows():
 
         # Optional: Warten bis die Datei heruntergeladen ist
         time.sleep(5)
+
+        # Verschiebe die heruntergeladene Datei in den Projektordner
+        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
+        shutil.move(downloaded_file, os.path.join(output_dir, f"participants_{course_name}.csv"))
 
     except Exception as e:
         print(f"Fehler beim Zugriff auf die Teilnehmerliste: {e}")
