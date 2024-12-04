@@ -27,8 +27,13 @@ if not os.path.exists(output_dir):
 # CSV-Datei laden
 data = pd.read_csv(file_path)
 
-# Duplikate im Feld "Name der Vorlesung" entfernen
-data = data.drop_duplicates(subset=['Name der Vorlesung'])
+# Duplikate im Feld "Moodle-Link" entfernen, sodass mindestens ein Eintrag pro Link erhalten bleibt
+data = data.drop_duplicates(subset=['Moodle-Link'])
+
+# CSV-Datei nach dem Entfernen von Duplikaten in einer Testdatei speichern
+test_csv_path = 'test_output_filtered_courses.csv'
+data.to_csv(test_csv_path, index=False)
+print(f"Test-CSV-Datei wurde unter '{test_csv_path}' gespeichert.")
 
 # Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
 courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
