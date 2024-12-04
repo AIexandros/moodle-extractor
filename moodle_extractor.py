@@ -16,32 +16,10 @@ load_dotenv()
 username = os.getenv("MOODLE_USERNAME")
 password = os.getenv("MOODLE_PASSWORD")
 
-# Pfad zur CSV-Datei mit den Kursinformationen
-file_path = 'Link-DB-549_records-20241203_1938.csv'
-
 # Ordner für die Teilnehmerlisten erstellen
 output_dir = "moodle_participants_lists"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-
-# CSV-Datei laden
-data = pd.read_csv(file_path)
-
-# Duplikate im Feld "Moodle-Link" entfernen, sodass mindestens ein Eintrag pro Link erhalten bleibt
-data = data.drop_duplicates(subset=['Moodle-Link'])
-
-# CSV-Datei nach dem Entfernen von Duplikaten in einer Testdatei speichern
-test_csv_path = 'test_output_filtered_courses.csv'
-data.to_csv(test_csv_path, index=False)
-print(f"Test-CSV-Datei wurde unter '{test_csv_path}' gespeichert.")
-
-# Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
-courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
-
-# Gebe alle Kurse aus, die evaluiert werden sollen
-print("Kurse zur Evaluation:")
-for index, row in courses_to_evaluate.iterrows():
-    print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
 
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -69,6 +47,64 @@ login_button.click()
 
 # Optional: Warten bis die Seite geladen ist
 time.sleep(5)
+
+# Navigiere zur Seite mit den Kursinformationen zum Herunterladen der CSV-Datei
+courses_url = "https://moodle.hs-hannover.de/mod/data/view.php?id=945891"
+driver.get(courses_url)
+
+# Optional: Warten bis die Seite geladen ist
+time.sleep(5)
+
+# Klicke auf den "Aktionen"-Button, um das Dropdown-Menü zu öffnen
+try:
+    actions_button = driver.find_element(By.XPATH, "//a[contains(@class, 'dropdown-toggle') and contains(@aria-label, 'Aktionen')]")
+    actions_button.click()
+
+    # Optional: Warten bis das Dropdown-Menü geöffnet ist
+    time.sleep(2)
+
+    # Klicke auf "Einträge exportieren"
+    export_entries_button = driver.find_element(By.XPATH, "//span[@class='menu-action-text' and text()='Einträge exportieren']")
+    export_entries_button.click()
+
+    # Optional: Warten bis die Seite geladen ist
+    time.sleep(2)
+
+    # Klicke auf den Button "Einträge exportieren" zum Herunterladen der Datei
+    export_submit_button = driver.find_element(By.ID, "id_submitbutton")
+    export_submit_button.click()
+
+    # Optional: Warten bis die Datei heruntergeladen ist
+    time.sleep(10)
+
+    # Verschiebe die heruntergeladene Datei in den Projektordner
+    download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
+    shutil.move(downloaded_file, "courses_information.csv")
+    file_path = "courses_information.csv"
+except Exception as e:
+    print(f"Fehler beim Herunterladen der Kursinformationen: {e}")
+    driver.quit()
+    exit()
+
+# CSV-Datei laden
+data = pd.read_csv(file_path)
+
+# Duplikate im Feld "Moodle-Link" entfernen, sodass mindestens ein Eintrag pro Link erhalten bleibt
+data = data.drop_duplicates(subset=['Moodle-Link'])
+
+# CSV-Datei nach dem Entfernen von Duplikaten in einer Testdatei speichern
+test_csv_path = 'test_output_filtered_courses.csv'
+data.to_csv(test_csv_path, index=False)
+print(f"Test-CSV-Datei wurde unter '{test_csv_path}' gespeichert.")
+
+# Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
+courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
+
+# Gebe alle Kurse aus, die evaluiert werden sollen
+print("Kurse zur Evaluation:")
+for index, row in courses_to_evaluate.iterrows():
+    print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
 
 # Durchlaufe alle Moodle-Links der Kurse mit Evaluierungswunsch
 for index, row in courses_to_evaluate.iterrows():
@@ -123,7 +159,6 @@ for index, row in courses_to_evaluate.iterrows():
         time.sleep(5)
 
         # Verschiebe die heruntergeladene Datei in den Projektordner
-        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
         downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
         shutil.move(downloaded_file, os.path.join(output_dir, f"participants_{course_name}.csv"))
 
