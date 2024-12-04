@@ -38,6 +38,11 @@ print(f"Test-CSV-Datei wurde unter '{test_csv_path}' gespeichert.")
 # Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
 courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
 
+# Gebe alle Kurse aus, die evaluiert werden sollen
+print("Kurse zur Evaluation:")
+for index, row in courses_to_evaluate.iterrows():
+    print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
+
 # Setup für Selenium WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
