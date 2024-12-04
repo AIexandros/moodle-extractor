@@ -6,7 +6,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 import os
 import time
-import csv
 import pandas as pd
 
 # Lade Umgebungsvariablen aus der .env-Datei
@@ -17,7 +16,7 @@ username = os.getenv("MOODLE_USERNAME")
 password = os.getenv("MOODLE_PASSWORD")
 
 # Pfad zur CSV-Datei mit den Kursinformationen
-file_path = 'Link-DB-549_records-20241120_2038.csv'
+file_path = 'Link-DB-549_records-20241203_1938.csv'
 
 # CSV-Datei laden
 data = pd.read_csv(file_path)
@@ -60,7 +59,7 @@ for index, row in courses_to_evaluate.iterrows():
     moodle_link = row['Moodle-Link']
     enrolment_key = row['Einschreibeschluessel']
     course_name = row['Name der Vorlesung']
-    print(f"Öffne Moodle-Link: {moodle_link}")
+    print(f"\nÖffne Moodle-Link: {moodle_link}")
 
     # Öffne die Kursseite
     driver.get(moodle_link)
@@ -88,34 +87,25 @@ for index, row in courses_to_evaluate.iterrows():
         # Optional: Warten bis die Seite geladen ist
         time.sleep(5)
 
-        # Alle Teilnehmer mit Vor- und Nachname sowie E-Mail-Adresse ausgeben
-        csv_filename = f'participants_{course_name}.csv'
-        with open(csv_filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Vorname Nachname", "E-Mail"])
+        # Prüfe, ob der Button "Alle Nutzer*innen auswählen" existiert und klicke darauf
+        try:
+            select_all_button = driver.find_element(By.XPATH, "//input[@type='button' and @id='checkall' and contains(@value, 'Alle')]")
+            select_all_button.click()
+        except:
+            # Falls der Button nicht existiert, klicke die Checkbox "select-all-participants"
+            select_all_checkbox = driver.find_element(By.ID, "select-all-participants")
+            select_all_checkbox.click()
 
-            while True:
-                participants_table = driver.find_element(By.TAG_NAME, "table")
-                rows = participants_table.find_elements(By.TAG_NAME, "tr")
+        # Optional: Warten bis die Auswahl abgeschlossen ist
+        time.sleep(2)
 
-                for row in rows[1:]:  # Überspringe den Header
-                    cols = row.find_elements(By.TAG_NAME, "td")
-                    if len(cols) >= 3:
-                        vorname_nachname = cols[0].text.strip().replace(" auswählen", "")  # Entferne "auswählen"
-                        email = cols[1].text.strip()
-                        writer.writerow([vorname_nachname, email])
-                        print(f"Name: {vorname_nachname}, E-Mail: {email}")
+        # Wähle die Option zum Herunterladen der Teilnehmerliste als CSV
+        download_option = driver.find_element(By.XPATH, "//option[contains(@value, 'bulkchange.php?operation=download_participants') and contains(., 'Komma separierte Werte')]")
+        download_option.click()
 
-                # Prüfe, ob es eine nächste Seite gibt und navigiere dorthin
-                try:
-                    next_page = driver.find_element(By.XPATH, "//a[contains(@class, 'page-link') and contains(., '»')]")
-                    next_page.click()
+        # Optional: Warten bis die Datei heruntergeladen ist
+        time.sleep(5)
 
-                    # Optional: Warten bis die Seite geladen ist
-                    time.sleep(5)
-                except:
-                    # Wenn es keine nächste Seite gibt, beende die Schleife
-                    break
     except Exception as e:
         print(f"Fehler beim Zugriff auf die Teilnehmerliste: {e}")
 
