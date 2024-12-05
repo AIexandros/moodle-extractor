@@ -90,6 +90,9 @@ except Exception as e:
 # CSV-Datei laden
 data = pd.read_csv(file_path)
 
+# Speichere die ursprüngliche Tabelle, um später die Semesterzüge zu verwenden
+original_data = data.copy()
+
 # Duplikate im Feld "Moodle-Link" entfernen, sodass mindestens ein Eintrag pro Link erhalten bleibt
 data = data.drop_duplicates(subset=['Moodle-Link'])
 
@@ -164,6 +167,65 @@ for index, row in courses_to_evaluate.iterrows():
 
     except Exception as e:
         print(f"Fehler beim Zugriff auf die Teilnehmerliste: {e}")
+
+# Erstelle die Tabelle für die Kurse zur Evaluation
+output_table_path = 'evaluation_courses_table.csv'
+columns = [
+    "Anrede", "Titel", "Vorname", "Nachname", "E-Mail-Adresse",
+    "LV-Bezeichnung", "LV-Kennung", "Semesterbezeichung", "LV-Art",
+    "Anzahl", "Fragebogen", "Semester"
+]
+
+table_data = pd.DataFrame(columns=columns)
+
+# Füge die Einträge aus den zu evaluierenden Kursen zur Tabelle hinzu
+for index, row in courses_to_evaluate.iterrows():
+    # Öffne die Kursseite, um die LV-Bezeichnung zu ermitteln
+    driver.get(row['Moodle-Link'])
+    time.sleep(5)  # Warten bis die Seite geladen ist
+
+    # Extrahiere die LV-Bezeichnung
+    try:
+        lv_title_element = driver.find_element(By.XPATH, "//h1[contains(@class, 'h2')]")
+        lv_title = lv_title_element.text.split(',')[0]  # LV-Bezeichnung bis zum ersten Komma
+    except Exception as e:
+        print(f"Fehler beim Extrahieren der LV-Bezeichnung: {e}")
+        lv_title = row['Name der Vorlesung']  # Fallback zur ursprünglichen Bezeichnung
+
+    # Anzahl der Teilnehmer aus der heruntergeladenen Teilnehmerliste extrahieren
+    try:
+        participants_file_path = os.path.join(output_dir, f"participants_{row['Name der Vorlesung']}.csv")
+        participants_data = pd.read_csv(participants_file_path)
+        participants_count = len(participants_data)
+    except Exception as e:
+        print(f"Fehler beim Ermitteln der Teilnehmeranzahl: {e}")
+        participants_count = ""  # Fallback, falls die Anzahl nicht ermittelt werden kann
+
+    # Semesterbezeichnung extrahieren
+    semesterzug = ", ".join(original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Semesterzug'].dropna().unique())
+
+    # Nachname aus der ursprünglichen Tabelle entnehmen
+    nachname = original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].dropna().unique()[0] if len(original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].dropna().unique()) > 0 else ""
+
+    # Füge die Informationen zur Tabelle hinzu
+    table_data = pd.concat([table_data, pd.DataFrame([{
+        "Anrede": "Herr/Frau",  # Placeholder, anpassbar
+        "Titel": "Prof.",  # Placeholder, anpassbar
+        "Vorname": "",  # Placeholder, anpassbar
+        "Nachname": nachname,
+        "E-Mail-Adresse": "",  # Placeholder, anpassbar
+        "LV-Bezeichnung": lv_title,
+        "LV-Kennung": row['Veranstaltungsart'] if 'Veranstaltungsart' in row else "",  # Verwende 'Veranstaltungsart' aus der CSV-Datei
+        "Semesterbezeichung": semesterzug,
+        "LV-Art": row['Veranstaltungsart'] if 'Veranstaltungsart' in row else "",  # Verwende 'Veranstaltungsart' aus der CSV-Datei
+        "Anzahl": participants_count,
+        "Fragebogen": "",  # Placeholder, anpassbar
+        "Semester": "WiSe 24/25"
+    }])], ignore_index=True)
+
+# Speichere die Tabelle in einer CSV-Datei
+table_data.to_csv(output_table_path, index=False)
+print(f"Die Tabelle mit den Kursinformationen wurde unter '{output_table_path}' gespeichert.")
 
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
 # driver.quit()
