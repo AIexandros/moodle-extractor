@@ -205,27 +205,29 @@ for index, row in courses_to_evaluate.iterrows():
     semesterzug = ", ".join(original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Semesterzug'].dropna().unique())
 
     # Nachname aus der ursprünglichen Tabelle entnehmen
-    nachname = original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].dropna().unique()[0] if len(original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].dropna().unique()) > 0 else ""
+    nachname = original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].iloc[0] if 'Dozent' in original_data.columns else ""
 
-    # Füge die Informationen zur Tabelle hinzu
+    # Füge den Eintrag zur Tabelle hinzu
     table_data = pd.concat([table_data, pd.DataFrame([{
-        "Anrede": "Herr/Frau",  # Placeholder, anpassbar
-        "Titel": "Prof.",  # Placeholder, anpassbar
-        "Vorname": "",  # Placeholder, anpassbar
+        "Anrede": "",
+        "Titel": "Prof.",
+        "Vorname": "",
         "Nachname": nachname,
-        "E-Mail-Adresse": "",  # Placeholder, anpassbar
+        "E-Mail-Adresse": "",  # Diese Information muss manuell hinzugefügt werden
         "LV-Bezeichnung": lv_title,
-        "LV-Kennung": row['Veranstaltungsart'] if 'Veranstaltungsart' in row else "",  # Verwende 'Veranstaltungsart' aus der CSV-Datei
+        "LV-Kennung": row['Kurzbezeichnung'],
         "Semesterbezeichung": semesterzug,
-        "LV-Art": row['Veranstaltungsart'] if 'Veranstaltungsart' in row else "",  # Verwende 'Veranstaltungsart' aus der CSV-Datei
+        "LV-Art": row['Veranstaltungsart'] if 'Veranstaltungsart' in row and pd.notna(row['Veranstaltungsart']) else "Vorlesung",
         "Anzahl": participants_count,
-        "Fragebogen": "",  # Placeholder, anpassbar
+        "Fragebogen": "Evalu",
         "Semester": "WiSe 24/25"
     }])], ignore_index=True)
 
-# Speichere die Tabelle in einer CSV-Datei
+# Speichere die Tabelle
+output_table_path = 'evaluation_courses_table.csv'
 table_data.to_csv(output_table_path, index=False)
 print(f"Die Tabelle mit den Kursinformationen wurde unter '{output_table_path}' gespeichert.")
 
 # Schließe den Browser nach der Anmeldung (falls gewünscht)
-# driver.quit()
+driver.quit()
+
