@@ -1,13 +1,17 @@
+import pandas as pd
+import os
+import time
+import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
-import os
-import time
-import pandas as pd
-import shutil
+from evaluation_table_creator import create_evaluation_table
+from concurrent.futures import ThreadPoolExecutor
 
 # Lade Umgebungsvariablen aus der .env-Datei
 load_dotenv()
@@ -21,213 +25,182 @@ output_dir = "moodle_participants_lists"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+# Datei mit Professorendaten laden
+professor_info_path = "faculty_information.csv"
+professor_data = pd.read_csv(professor_info_path)
+
 # Setup für Selenium WebDriver
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+def setup_driver():
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
-# URL der Moodle-Login-Seite
-moodle_url = "https://moodle.hs-hannover.de/login/index.php"
+# Moodle-Login durchführen
+def moodle_login(driver, username, password):
+    moodle_url = "https://moodle.hs-hannover.de/login/index.php"
+    driver.get(moodle_url)
+    time.sleep(3)  # Warten, bis die Seite geladen ist
 
-# Öffne die Moodle-Login-Seite
-driver.get(moodle_url)
+    # Eingabefelder finden und ausfüllen
+    driver.find_element(By.ID, "username").send_keys(username)
+    driver.find_element(By.ID, "password").send_keys(password)
+    driver.find_element(By.ID, "loginbtn").click()
+    time.sleep(5)  # Warten, bis die Seite nach Login geladen ist
 
-# Warten, bis die Seite geladen ist
-time.sleep(3)  # Wartezeit anpassen, je nach Ladegeschwindigkeit
+# Klick-Utility mit Fallback auf JavaScript und erweiterten Wartezeiten
+def safe_click(driver, element):
+    try:
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", element)
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable(element))
+        element.click()
+    except Exception as e:
+        print(f"JavaScript-Klick wird verwendet, da regulärer Klick fehlschlug: {e}")
+        driver.execute_script("arguments[0].click();", element)
 
-# Finde das Eingabefeld für den Anmeldenamen/E-Mail
-username_field = driver.find_element(By.ID, "username")
-username_field.send_keys(username)
-
-# Finde das Eingabefeld für das Passwort
-password_field = driver.find_element(By.ID, "password")
-password_field.send_keys(password)
-
-# Finde und drücke den Login-Button
-login_button = driver.find_element(By.ID, "loginbtn")
-login_button.click()
-
-# Optional: Warten bis die Seite geladen ist
-time.sleep(5)
-
-# Navigiere zur Seite mit den Kursinformationen zum Herunterladen der CSV-Datei
-courses_url = "https://moodle.hs-hannover.de/mod/data/view.php?id=945891"
-driver.get(courses_url)
-
-# Optional: Warten bis die Seite geladen ist
-time.sleep(5)
-
-# Klicke auf den "Aktionen"-Button, um das Dropdown-Menü zu öffnen
-try:
-    actions_button = driver.find_element(By.XPATH, "//a[contains(@class, 'dropdown-toggle') and contains(@aria-label, 'Aktionen')]")
-    actions_button.click()
-
-    # Optional: Warten bis das Dropdown-Menü geöffnet ist
-    time.sleep(2)
-
-    # Klicke auf "Einträge exportieren"
-    export_entries_button = driver.find_element(By.XPATH, "//span[@class='menu-action-text' and text()='Einträge exportieren']")
-    export_entries_button.click()
-
-    # Optional: Warten bis die Seite geladen ist
-    time.sleep(2)
-
-    # Klicke auf den Button "Einträge exportieren" zum Herunterladen der Datei
-    export_submit_button = driver.find_element(By.ID, "id_submitbutton")
-    export_submit_button.click()
-
-    # Optional: Warten bis die Datei heruntergeladen ist
-    time.sleep(10)
-
-    # Verschiebe die heruntergeladene Datei in den Projektordner
-    download_path = os.path.join(os.path.expanduser("~"), "Downloads")
-    downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
-    shutil.move(downloaded_file, "courses_information.csv")
-    file_path = "courses_information.csv"
-except Exception as e:
-    print(f"Fehler beim Herunterladen der Kursinformationen: {e}")
-    driver.quit()
-    exit()
-
-# CSV-Datei laden
-data = pd.read_csv(file_path)
-
-# Speichere die ursprüngliche Tabelle, um später die Semesterzüge zu verwenden
-original_data = data.copy()
-
-# Duplikate im Feld "Moodle-Link" entfernen, sodass mindestens ein Eintrag pro Link erhalten bleibt
-data = data.drop_duplicates(subset=['Moodle-Link'])
-
-# CSV-Datei nach dem Entfernen von Duplikaten in einer Testdatei speichern
-test_csv_path = 'test_output_filtered_courses.csv'
-data.to_csv(test_csv_path, index=False)
-print(f"Test-CSV-Datei wurde unter '{test_csv_path}' gespeichert.")
-
-# Filtere die Kurse, bei denen unter Evaluierungswunsch "ja" steht
-courses_to_evaluate = data[data['Evaluierungswunsch'] == 'ja']
-
-# Gebe alle Kurse aus, die evaluiert werden sollen
-print("Kurse zur Evaluation:")
-for index, row in courses_to_evaluate.iterrows():
-    print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
-
-# Durchlaufe alle Moodle-Links der Kurse mit Evaluierungswunsch
-for index, row in courses_to_evaluate.iterrows():
+# Teilnehmerlisten für einen Kurs verarbeiten
+def process_course(row):
+    driver = setup_driver()
+    moodle_login(driver, username, password)
     moodle_link = row['Moodle-Link']
     enrolment_key = row['Einschreibeschluessel']
     course_name = row['Name der Vorlesung']
-    print(f"\nÖffne Moodle-Link: {moodle_link}")
 
-    # Öffne die Kursseite
+    participants_file = os.path.join(output_dir, f"participants_{course_name}.csv")
+
+    print(f"\nVerarbeite Kurs: {course_name}")
     driver.get(moodle_link)
-
-    # Optional: Warten bis die Seite geladen ist
     time.sleep(5)
 
-    # Prüfe, ob die Seite ein Einschreibeschlüsselfeld enthält und fülle es aus
     try:
-        enrolment_field = driver.find_element(By.XPATH, "//input[@type='password' and contains(@id, 'enrolpassword')]")
+        # Einschreibeschlüssel eingeben
+        enrolment_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//input[@type='password' and contains(@id, 'enrolpassword')]"))
+        )
         enrolment_field.send_keys(enrolment_key)
         enrolment_field.send_keys(Keys.RETURN)
-
-        # Optional: Warten bis die Seite geladen ist
         time.sleep(5)
-    except:
-        # Falls bereits eingeschrieben, einfach fortfahren
-        pass
+    except Exception as e:
+        print(f"Kein Einschreibeschlüssel erforderlich oder bereits eingeschrieben für {course_name}. Fehler: {e}")
 
-    # Finde und klicke auf den Button "Teilnehmer*Innen"
     try:
-        participants_button = driver.find_element(By.PARTIAL_LINK_TEXT, "Teilnehmer")
-        participants_button.click()
-
-        # Optional: Warten bis die Seite geladen ist
+        # Teilnehmer-Link klicken
+        participants_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//a[contains(text(),'Teilnehmer')]"))
+        )
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", participants_button)
+        safe_click(driver, participants_button)
         time.sleep(5)
 
-        # Prüfe, ob der Button "Alle Nutzer*innen auswählen" existiert und klicke darauf
+        # Prüfen und auf "Alle Nutzer*innen auswählen" klicken
         try:
-            select_all_button = driver.find_element(By.XPATH, "//input[@type='button' and @id='checkall' and contains(@value, 'Alle')]")
-            select_all_button.click()
-        except:
-            # Falls der Button nicht existiert, klicke die Checkbox "select-all-participants"
-            select_all_checkbox = driver.find_element(By.ID, "select-all-participants")
-            select_all_checkbox.click()
+            select_all_button = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.ID, "checkall"))
+            )
+            safe_click(driver, select_all_button)
+        except Exception:
+            # Fallback auf Checkbox "select-all-participants"
+            select_all_checkbox = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.ID, "select-all-participants"))
+            )
+            safe_click(driver, select_all_checkbox)
 
-        # Optional: Warten bis die Auswahl abgeschlossen ist
+        # CSV-Option auswählen
+        download_option = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//option[contains(@value, 'bulkchange.php?operation=download_participants') and contains(., 'Komma separierte Werte')]"))
+        )
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", download_option)
+        safe_click(driver, download_option)
+        time.sleep(5)
+
+        # Datei verschieben
+        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
+        shutil.move(downloaded_file, participants_file)
+        print(f"Teilnehmerliste für {course_name} erfolgreich heruntergeladen.")
+    except Exception as e:
+        print(f"Fehler beim Zugriff auf die Teilnehmerliste für {course_name}: {e}")
+    finally:
+        driver.quit()
+
+    return participants_file
+
+# Hauptprozess
+def main():
+    driver = setup_driver()
+    moodle_login(driver, username, password)
+
+    # Kursinformationen herunterladen
+    courses_url = "https://moodle.hs-hannover.de/mod/data/view.php?id=945891"
+    file_path = "courses_information.csv"
+    driver.get(courses_url)
+    time.sleep(5)
+
+    try:
+        # Aktionen-Menü öffnen
+        actions_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//a[contains(@class, 'dropdown-toggle') and contains(@aria-label, 'Aktionen')]"))
+        )
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", actions_button)
+        safe_click(driver, actions_button)
         time.sleep(2)
 
-        # Wähle die Option zum Herunterladen der Teilnehmerliste als CSV
-        download_option = driver.find_element(By.XPATH, "//option[contains(@value, 'bulkchange.php?operation=download_participants') and contains(., 'Komma separierte Werte')]")
-        download_option.click()
+        # "Einträge exportieren" auswählen
+        export_entries = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[@class='menu-action-text' and text()='Einträge exportieren']"))
+        )
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", export_entries)
+        safe_click(driver, export_entries)
+        time.sleep(2)
 
-        # Optional: Warten bis die Datei heruntergeladen ist
-        time.sleep(5)
+        # Export abschicken
+        export_submit = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "id_submitbutton"))
+        )
+        driver.execute_script("arguments[0].scrollIntoViewIfNeeded();", export_submit)
+        safe_click(driver, export_submit)
+        time.sleep(10)
 
-        # Verschiebe die heruntergeladene Datei in den Projektordner
+        # Heruntergeladene Datei verschieben
+        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
         downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
-        shutil.move(downloaded_file, os.path.join(output_dir, f"participants_{course_name}.csv"))
-
+        shutil.move(downloaded_file, file_path)
+        print("Kursinformationen erfolgreich heruntergeladen.")
     except Exception as e:
-        print(f"Fehler beim Zugriff auf die Teilnehmerliste: {e}")
+        print(f"Fehler beim Herunterladen der Kursinformationen: {e}")
+        driver.quit()
+        exit()
 
-# Erstelle die Tabelle für die Kurse zur Evaluation
-output_table_path = 'evaluation_courses_table.csv'
-columns = [
-    "Anrede", "Titel", "Vorname", "Nachname", "E-Mail-Adresse",
-    "LV-Bezeichnung", "LV-Kennung", "Semesterbezeichung", "LV-Art",
-    "Anzahl", "Fragebogen", "Semester"
-]
+    driver.quit()
 
-table_data = pd.DataFrame(columns=columns)
+    # Kurse verarbeiten
+    courses_data = pd.read_csv(file_path)
 
-# Füge die Einträge aus den zu evaluierenden Kursen zur Tabelle hinzu
-for index, row in courses_to_evaluate.iterrows():
-    # Öffne die Kursseite, um die LV-Bezeichnung zu ermitteln
-    driver.get(row['Moodle-Link'])
-    time.sleep(5)  # Warten bis die Seite geladen ist
+    # Studiengänge pro Kurs aggregieren
+    courses_data['Studiengang'] = courses_data.groupby('Moodle-Link')['Semesterzug'].transform(lambda x: ','.join(set(x.dropna())))
 
-    # Extrahiere die LV-Bezeichnung
-    try:
-        lv_title_element = driver.find_element(By.XPATH, "//h1[contains(@class, 'h2')]")
-        lv_title = lv_title_element.text.split(',')[0]  # LV-Bezeichnung bis zum ersten Komma
-    except Exception as e:
-        print(f"Fehler beim Extrahieren der LV-Bezeichnung: {e}")
-        lv_title = row['Name der Vorlesung']  # Fallback zur ursprünglichen Bezeichnung
+    # Duplikate entfernen
+    courses_data = courses_data.drop_duplicates(subset=['Moodle-Link'])
+    courses_to_evaluate = courses_data[courses_data['Evaluierungswunsch'] == 'ja']
 
-    # Anzahl der Teilnehmer aus der heruntergeladenen Teilnehmerliste extrahieren
-    try:
-        participants_file_path = os.path.join(output_dir, f"participants_{row['Name der Vorlesung']}.csv")
-        participants_data = pd.read_csv(participants_file_path)
-        participants_count = len(participants_data)
-    except Exception as e:
-        print(f"Fehler beim Ermitteln der Teilnehmeranzahl: {e}")
-        participants_count = ""  # Fallback, falls die Anzahl nicht ermittelt werden kann
+    print("Kurse zur Evaluation:")
+    for index, row in courses_to_evaluate.iterrows():
+        print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
 
-    # Semesterbezeichnung extrahieren
-    semesterzug = ", ".join(original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Semesterzug'].dropna().unique())
+    participants_counts = {}
+    with ThreadPoolExecutor() as executor:
+        results = list(executor.map(process_course, [row for _, row in courses_to_evaluate.iterrows()]))
 
-    # Nachname aus der ursprünglichen Tabelle entnehmen
-    nachname = original_data[original_data['Moodle-Link'] == row['Moodle-Link']]['Dozent'].iloc[0] if 'Dozent' in original_data.columns else ""
+    for course_name, file_path in zip(courses_to_evaluate['Name der Vorlesung'], results):
+        try:
+            if os.path.exists(file_path):
+                participants_data = pd.read_csv(file_path)
+                participants_counts[course_name] = max(len(participants_data) - 1, 0)  # Teilnehmer minus 1 (sich selbst abziehen)
+            else:
+                participants_counts[course_name] = 0
+        except Exception as e:
+            print(f"Fehler beim Verarbeiten der Teilnehmerliste für {course_name}: {e}")
+            participants_counts[course_name] = 0
 
-    # Füge den Eintrag zur Tabelle hinzu
-    table_data = pd.concat([table_data, pd.DataFrame([{
-        "Anrede": "",
-        "Titel": "Prof.",
-        "Vorname": "",
-        "Nachname": nachname,
-        "E-Mail-Adresse": "",  # Diese Information muss manuell hinzugefügt werden
-        "LV-Bezeichnung": lv_title,
-        "LV-Kennung": row['Kurzbezeichnung'],
-        "Semesterbezeichung": semesterzug,
-        "LV-Art": row['Veranstaltungsart'] if 'Veranstaltungsart' in row and pd.notna(row['Veranstaltungsart']) else "Vorlesung",
-        "Anzahl": participants_count,
-        "Fragebogen": "Evalu",
-        "Semester": "WiSe 24/25"
-    }])], ignore_index=True)
+    courses_to_evaluate.loc[:, 'course_participants'] = courses_to_evaluate['Name der Vorlesung'].map(participants_counts)
+    create_evaluation_table(courses_to_evaluate, courses_data, output_dir, driver, professor_data)
 
-# Speichere die Tabelle
-output_table_path = 'evaluation_courses_table.csv'
-table_data.to_csv(output_table_path, index=False)
-print(f"Die Tabelle mit den Kursinformationen wurde unter '{output_table_path}' gespeichert.")
-
-# Schließe den Browser nach der Anmeldung (falls gewünscht)
-driver.quit()
-
+if __name__ == "__main__":
+    main()
