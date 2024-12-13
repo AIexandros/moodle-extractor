@@ -10,8 +10,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
-from evaluation_table_creator import create_evaluation_table
+from evaluation_table_creator import create_evaluation_table, prepare_evaluation_data
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 # Lade Umgebungsvariablen aus der .env-Datei
 load_dotenv()
@@ -173,12 +174,8 @@ def main():
     # Kurse verarbeiten
     courses_data = pd.read_csv(file_path)
 
-    # Studiengänge pro Kurs aggregieren
-    courses_data['Studiengang'] = courses_data.groupby('Moodle-Link')['Semesterzug'].transform(lambda x: ','.join(set(x.dropna())))
-
-    # Duplikate entfernen
-    courses_data = courses_data.drop_duplicates(subset=['Moodle-Link'])
-    courses_to_evaluate = courses_data[courses_data['Evaluierungswunsch'] == 'ja']
+    # Daten für die Evaluation vorbereiten
+    courses_to_evaluate = prepare_evaluation_data(courses_data, output_dir)
 
     print("Kurse zur Evaluation:")
     for index, row in courses_to_evaluate.iterrows():
