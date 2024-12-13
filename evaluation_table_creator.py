@@ -85,11 +85,13 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             firstname = professor_row.get("Vorname", "")
             surname = professor_row.get("Nachname", "")
             email = professor_row.get("E-Mail-Adresse", "")
+            salutation = professor_row.get("Anrede", "")
         else:
             professional_title = None
             firstname = "Unbekannt"
             surname = row.get("Dozent", "")
             email = "Nicht verfügbar"
+            salutation = "Herr/Frau"
 
         # Teilnehmerliste laden und Anzahl bestimmen
         participants_file = os.path.join(output_dir, f"participants_{row['Name der Vorlesung']}.csv")
@@ -101,7 +103,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
 
         evaluation_table = pd.concat([evaluation_table, pd.DataFrame([{
             "Funktion": "Dozent",  # Alle sind Dozenten
-            "Anrede": "Herr/Frau",  # Beispiel-Anrede
+            "Anrede": salutation,  # Anrede aus Professorendaten
             "Titel": professional_title,  # Titel des Dozenten
             "Vorname": firstname,
             "Nachname": surname,
