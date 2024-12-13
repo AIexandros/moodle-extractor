@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import time
 import shutil
+import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -64,8 +65,6 @@ def process_course(row):
     enrolment_key = row['Einschreibeschluessel']
     course_name = row['Name der Vorlesung']
 
-    participants_file = os.path.join(output_dir, f"participants_{course_name}.csv")
-
     print(f"\nVerarbeite Kurs: {course_name}")
     driver.get(moodle_link)
     time.sleep(5)
@@ -111,17 +110,44 @@ def process_course(row):
         safe_click(driver, download_option)
         time.sleep(5)
 
-        # Datei verschieben
-        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
-        downloaded_file = max([os.path.join(download_path, f) for f in os.listdir(download_path)], key=os.path.getctime)
-        shutil.move(downloaded_file, participants_file)
-        print(f"Teilnehmerliste für {course_name} erfolgreich heruntergeladen.")
+        print(f"Teilnehmerliste für {course_name} wurde heruntergeladen.")
+
     except Exception as e:
         print(f"Fehler beim Zugriff auf die Teilnehmerliste für {course_name}: {e}")
     finally:
         driver.quit()
 
-    return participants_file
+    return None  # Wir verschieben und benennen Dateien später
+
+# Nachträgliche Benennung der Dateien
+def rename_downloaded_files(courses_to_evaluate, download_path, output_dir):
+    for _, row in courses_to_evaluate.iterrows():
+        course_name = row['Name der Vorlesung']
+        moodle_link = row['Moodle-Link']
+
+        # Kurs-ID aus dem Link extrahieren
+        match = re.search(r"id=(\d+)", moodle_link)
+        course_id = match.group(1) if match else None
+
+        if not course_id:
+            print(f"Keine Kurs-ID für {course_name}. Überspringe.")
+            continue
+
+        # Datei finden, die zur Kurs-ID passt
+        try:
+            downloaded_file = next(
+                f for f in os.listdir(download_path)
+                if course_id in f and f.endswith(".csv")
+            )
+
+            # Umbenennen und verschieben
+            final_file_name = f"participants_{course_name.replace(' ', '_')}.csv"
+            final_file_path = os.path.join(output_dir, final_file_name)
+            shutil.move(os.path.join(download_path, downloaded_file), final_file_path)
+            print(f"Teilnehmerliste für {course_name} umbenannt und gespeichert unter {final_file_path}.")
+
+        except StopIteration:
+            print(f"Keine Datei für Kurs-ID {course_id} gefunden.")
 
 # Hauptprozess
 def main():
@@ -182,19 +208,25 @@ def main():
         print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
 
     participants_counts = {}
+
+    # Alle Teilnehmerlisten herunterladen
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(process_course, [row for _, row in courses_to_evaluate.iterrows()]))
 
+    # Dateien umbenennen
+    download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    rename_downloaded_files(courses_to_evaluate, download_path, output_dir)
+
     for course_name, file_path in zip(courses_to_evaluate['Name der Vorlesung'], results):
-        try:
-            if os.path.exists(file_path):
-                participants_data = pd.read_csv(file_path)
-                participants_counts[course_name] = max(len(participants_data) - 1, 0)  # Teilnehmer minus 1 (sich selbst abziehen)
-            else:
+            try:
+                if file_path and os.path.exists(file_path):
+                    participants_data = pd.read_csv(file_path)
+                    participants_counts[course_name] = max(len(participants_data) - 1, 0)  # Teilnehmer minus 1 (sich selbst abziehen)
+                else:
+                    participants_counts[course_name] = 0
+            except Exception as e:
+                print(f"Fehler beim Verarbeiten der Teilnehmerliste für {course_name}: {e}")
                 participants_counts[course_name] = 0
-        except Exception as e:
-            print(f"Fehler beim Verarbeiten der Teilnehmerliste für {course_name}: {e}")
-            participants_counts[course_name] = 0
 
     courses_to_evaluate.loc[:, 'course_participants'] = courses_to_evaluate['Name der Vorlesung'].map(participants_counts)
     create_evaluation_table(courses_to_evaluate, courses_data, output_dir, driver, professor_data)
