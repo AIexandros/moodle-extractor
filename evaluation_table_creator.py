@@ -118,7 +118,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             "LV-Kennung": lv_kennung,  # Generierte LV-Kennung
             "LV-Ort": row.get("LV-Ort", ""),
             "Studiengang": row.get("Studiengang", ""),
-            "LV-Art": 1 if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 0,
+            "LV-Art": 1 if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 8,
             "Anzahl": course_participants,  # Anzahl Teilnehmer minus 1
             "Sekundärdoz": None,  # Optional
             "Fragebogentyp": "Standard",  # Fragebogentyp (Standard)
