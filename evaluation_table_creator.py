@@ -86,12 +86,14 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             surname = professor_row.get("Nachname", "")
             email = professor_row.get("E-Mail-Adresse", "")
             salutation = professor_row.get("Anrede", "")
+            initials = f"{firstname[0].upper()}{surname[0].upper()}".replace("Ç", "C")
         else:
             professional_title = None
             firstname = "Unbekannt"
             surname = row.get("Dozent", "")
             email = "Nicht verfügbar"
             salutation = "Herr/Frau"
+            initials = "XX"
 
         # Teilnehmerliste laden und Anzahl bestimmen
         participants_file = os.path.join(output_dir, f"participants_{row['Name der Vorlesung']}.csv")
@@ -101,6 +103,10 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
         else:
             course_participants = 0
 
+        # LV-Kennung erstellen
+        course_shortname = row.get("Kurzbezeichnung", "")
+        lv_kennung = f"{course_shortname}_{initials}" if course_shortname and initials else "Unbekannt"
+
         evaluation_table = pd.concat([evaluation_table, pd.DataFrame([{
             "Funktion": "Dozent",  # Alle sind Dozenten
             "Anrede": salutation,  # Anrede aus Professorendaten
@@ -109,7 +115,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             "Nachname": surname,
             "E-Mail": email,
             "LV-Name": row.get("Name der Vorlesung", ""),
-            "LV-Kennung": row.get("Kuerzel", ""),
+            "LV-Kennung": lv_kennung,  # Generierte LV-Kennung
             "LV-Ort": row.get("LV-Ort", ""),
             "Studiengang": row.get("Studiengang", ""),
             "LV-Art": row.get("Veranstaltungsart", ""),
