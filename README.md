@@ -8,6 +8,7 @@ Dieses Projekt dient der automatisierten Extraktion von Teilnehmerlisten aus Moo
 - Selenium
 - BeautifulSoup4
 - webdriver-manager
+- python-dotenv
 
 ## Installation
 
