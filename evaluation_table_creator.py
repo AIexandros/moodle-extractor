@@ -38,8 +38,22 @@ def prepare_evaluation_data(courses_data, output_dir):
     # Studiengänge pro Kurs aggregieren
     courses_data['Studiengang'] = courses_data.groupby('Moodle-Link')['Semesterzug'].transform(lambda x: ','.join(set(x.dropna())))
 
+     # Blacklist-Kriterien:
+     # 1. Evaluierungswunsch == "Ja" und kein Moodle-Link (NaN oder leerer String).
+     # 2. Evaluierungswunsch == "Ja" und Einschreibeschlüssel == "Bitte per E-Mail beim Dozenten erfragen".
+    blacklist = courses_data[
+        (courses_data['Evaluierungswunsch'].str.lower() == 'ja') & (
+            courses_data['Moodle-Link'].isnull() | 
+            (courses_data['Moodle-Link'].str.strip() == '') | 
+            (courses_data['Einschreibeschluessel'].str.strip().str.lower() == "bitte per e-mail beim dozenten erfragen")
+        )
+    ]
+
     # Duplikate entfernen
     courses_to_evaluate = courses_data.drop_duplicates(subset=['Moodle-Link'])
+
+    if output_dir:
+        blacklist.to_csv(f"{output_dir}/blacklist.csv", index=False)
 
     return courses_to_evaluate[courses_to_evaluate['Evaluierungswunsch'] == 'ja']
 
