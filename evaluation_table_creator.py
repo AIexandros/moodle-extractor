@@ -95,18 +95,26 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             salutation = "Herr/Frau"
             initials = "XX"
 
-        # Teilnehmerliste laden und Anzahl bestimmen
-        participants_file = os.path.join(output_dir, f"participants_{row['Name der Vorlesung']}.csv")
-        if os.path.exists(participants_file):
-            participants_data = pd.read_csv(participants_file)
-            course_participants = max(len(participants_data) - 1, 0)  # Anzahl der Teilnehmer minus 1
-        else:
-            course_participants = 0
-
         # LV-Kennung erstellen
         course_shortname = row.get("Kurzbezeichnung", "")
         lv_kennung = f"{course_shortname}_{initials}" if course_shortname and initials else "Unbekannt"
 
+        # Teilnehmeranzahl aus Teilnehmerliste bestimmen
+        participants_file = f"participants_{row.get('Name der Vorlesung', '').replace(' ', '_')}.csv"
+        participants_path = os.path.join(output_dir, participants_file)
+
+        try:
+            if os.path.exists(participants_path):
+                participants_data = pd.read_csv(participants_path)
+                participant_count = len(participants_data) - 1  # Spaltenanzahl - 1
+            else:
+                participant_count = 0
+                print(f"Teilnehmerliste für {row.get('Name der Vorlesung', '')} nicht gefunden.")
+        except Exception as e:
+            print(f"Fehler beim Lesen der Teilnehmerliste {participants_file}: {e}")
+            participant_count = 0
+
+        # Evaluationstabelle befüllen
         evaluation_table = pd.concat([evaluation_table, pd.DataFrame([{
             "Funktion": "Dozent",  # Alle sind Dozenten
             "Anrede": salutation,  # Anrede aus Professorendaten
@@ -119,7 +127,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             "LV-Ort": row.get("LV-Ort", ""),
             "Studiengang": row.get("Studiengang", ""),
             "LV-Art": 1 if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 8,
-            "Anzahl": course_participants,  # Anzahl Teilnehmer minus 1
+            "Anzahl": participant_count,  # Anzahl der Teilnehmer
             "Sekundärdoz": None,  # Optional
             "Fragebogentyp": "Standard",  # Fragebogentyp (Standard)
             "Semester": row.get("Semester", "")
