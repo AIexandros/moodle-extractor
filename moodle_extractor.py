@@ -207,8 +207,6 @@ def main():
     for index, row in courses_to_evaluate.iterrows():
         print(f"- {row['Name der Vorlesung']} ({row['Moodle-Link']})")
 
-    participants_counts = {}
-
     # Alle Teilnehmerlisten herunterladen
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(process_course, [row for _, row in courses_to_evaluate.iterrows()]))
@@ -217,18 +215,6 @@ def main():
     download_path = os.path.join(os.path.expanduser("~"), "Downloads")
     rename_downloaded_files(courses_to_evaluate, download_path, output_dir)
 
-    for course_name, file_path in zip(courses_to_evaluate['Name der Vorlesung'], results):
-            try:
-                if file_path and os.path.exists(file_path):
-                    participants_data = pd.read_csv(file_path)
-                    participants_counts[course_name] = max(len(participants_data) - 1, 0)  # Teilnehmer minus 1 (sich selbst abziehen)
-                else:
-                    participants_counts[course_name] = 0
-            except Exception as e:
-                print(f"Fehler beim Verarbeiten der Teilnehmerliste für {course_name}: {e}")
-                participants_counts[course_name] = 0
-
-    courses_to_evaluate.loc[:, 'course_participants'] = courses_to_evaluate['Name der Vorlesung'].map(participants_counts)
     create_evaluation_table(courses_to_evaluate, courses_data, output_dir, driver, professor_data)
 
 if __name__ == "__main__":
