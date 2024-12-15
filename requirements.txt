@@ -2,6 +2,7 @@ selenium
 beautifulsoup4
 webdriver-manager
 pandas
+python-dotenv
 
 
 #Zum installieren der Abhängigkeiten:
