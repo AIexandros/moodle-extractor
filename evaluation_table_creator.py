@@ -143,7 +143,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             "LV-Art": 1 if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 8,
             "Anzahl": participant_count,  # Anzahl der Teilnehmer
             "Sekundärdoz": None,  # Optional
-            "Fragebogentyp": "Evalu",  # Fragebogentyp (Standard)
+            "Fragebogentyp": 'Evalu' if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 'HSH-Labor',  # Fragebogentyp (Standard)
             "Semester": row.get("Semester", "")
         }])], ignore_index=True)
 
