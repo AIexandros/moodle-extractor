@@ -12,6 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 from evaluation_table_creator import create_evaluation_table, prepare_evaluation_data
+from mailadressen_table_creator import create_mailadressen_table
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -216,6 +217,9 @@ def main():
     rename_downloaded_files(courses_to_evaluate, download_path, output_dir)
 
     create_evaluation_table(courses_to_evaluate, courses_data, output_dir, driver, professor_data)
+
+    create_mailadressen_table(courses_to_evaluate, output_dir)
+
 
 if __name__ == "__main__":
     main()
