@@ -11,8 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
-from evaluation_table_creator import create_evaluation_table, prepare_evaluation_data
-from mailadressen_table_creator import create_mailadressen_table
+from evaluation_table_creator import create_evaluation_table, prepare_evaluation_data, generate_three_column_table
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -122,6 +121,12 @@ def process_course(row):
 
 # Nachträgliche Benennung der Dateien
 def rename_downloaded_files(courses_to_evaluate, download_path, output_dir):
+    blacklist_path = os.path.join(output_dir, "blacklist.csv")
+    if os.path.exists(blacklist_path):
+        blacklist_df = pd.read_csv(blacklist_path)
+    else:
+        blacklist_df = pd.DataFrame(columns=["Name der Vorlesung", "Moodle-Link", "Einschreibeschluessel"])
+
     for _, row in courses_to_evaluate.iterrows():
         course_name = row['Name der Vorlesung']
         moodle_link = row['Moodle-Link']
@@ -132,23 +137,33 @@ def rename_downloaded_files(courses_to_evaluate, download_path, output_dir):
 
         if not course_id:
             print(f"Keine Kurs-ID für {course_name}. Überspringe.")
+            blacklist_df.loc[len(blacklist_df)] = {
+                "Name der Vorlesung": course_name,
+                "Moodle-Link": moodle_link,
+                "Einschreibeschluessel": row['Einschreibeschluessel']
+            }
             continue
 
-        # Datei finden, die zur Kurs-ID passt
         try:
+            # Datei finden und umbenennen
             downloaded_file = next(
                 f for f in os.listdir(download_path)
                 if course_id in f and f.endswith(".csv")
             )
-
-            # Umbenennen und verschieben
             final_file_name = f"participants_{course_name.replace(' ', '_')}.csv"
             final_file_path = os.path.join(output_dir, final_file_name)
             shutil.move(os.path.join(download_path, downloaded_file), final_file_path)
             print(f"Teilnehmerliste für {course_name} umbenannt und gespeichert unter {final_file_path}.")
-
         except StopIteration:
-            print(f"Keine Datei für Kurs-ID {course_id} gefunden.")
+            print(f"Teilnehmerliste für {course_name} nicht gefunden. Kurs wird zur Blacklist hinzugefügt.")
+            blacklist_df.loc[len(blacklist_df)] = {
+                "Name der Vorlesung": course_name,
+                "Moodle-Link": moodle_link,
+                "Einschreibeschluessel": row['Einschreibeschluessel']
+            }
+
+    # Aktualisierte Blacklist speichern
+    blacklist_df.to_csv(blacklist_path, index=False)
 
 # Hauptprozess
 def main():
@@ -212,13 +227,19 @@ def main():
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(process_course, [row for _, row in courses_to_evaluate.iterrows()]))
 
-    # Dateien umbenennen
+    # Dateien umbenennen und fehlende Teilnehmerlisten zur Blacklist hinzufügen
     download_path = os.path.join(os.path.expanduser("~"), "Downloads")
     rename_downloaded_files(courses_to_evaluate, download_path, output_dir)
 
     create_evaluation_table(courses_to_evaluate, courses_data, output_dir, driver, professor_data)
 
-    create_mailadressen_table(courses_to_evaluate, output_dir)
+    # Pfade zur Evaluationstabelle und Teilnehmerlisten-Verzeichnis
+    evaluation_table_path = os.path.join(output_dir, "Steuerdatei.csv")
+    participants_dir = "moodle_participants_lists"
+    output_file = os.path.join(output_dir, "finale_tabelle.csv")
+
+    # Dreispaltige Tabelle generieren
+    generate_three_column_table(evaluation_table_path, participants_dir, output_file)
 
 
 if __name__ == "__main__":
