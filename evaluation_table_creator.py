@@ -21,8 +21,8 @@ def determine_current_semester():
 
 def prepare_evaluation_data(courses_data, output_dir):
     """
-    Bereitet die Kursdaten für die Evaluation vor, einschließlich der Aggregation von Studiengängen
-    und der Zuordnung des aktuellen Semesters.
+    Bereitet die Kursdaten für die Evaluation vor, einschließlich der Aggregation von Studiengängen,
+    der Zuordnung des aktuellen Semesters, der LV-Art und des Fragebogentyps.
 
     Parameter:
         courses_data (pd.DataFrame): Die ursprünglichen Kursdaten.
@@ -38,16 +38,39 @@ def prepare_evaluation_data(courses_data, output_dir):
     # Studiengänge pro Kurs aggregieren
     courses_data['Studiengang'] = courses_data.groupby('Moodle-Link')['Semesterzug'].transform(lambda x: ','.join(set(x.dropna())))
 
-     # Blacklist-Kriterien:
-     # 1. Evaluierungswunsch == "Ja" und kein Moodle-Link (NaN oder leerer String).
-     # 2. Evaluierungswunsch == "Ja" und Einschreibeschlüssel == "Bitte per E-Mail beim Dozenten erfragen".
+    # Blacklist-Kriterien:
     blacklist = courses_data[
-        (courses_data['Evaluierungswunsch'].str.lower() == 'ja') & (
+        ((courses_data['Evaluierungswunsch als Vorlesung'].str.lower() == 'ja') |
+         (courses_data['Evaluierungswunsch als Labor'].str.lower() == 'ja')) & (
             courses_data['Moodle-Link'].isnull() | 
             (courses_data['Moodle-Link'].str.strip() == '') | 
             (courses_data['Einschreibeschluessel'].str.strip().str.lower() == "bitte per e-mail beim dozenten erfragen")
         )
     ]
+
+    # LV-Art und Fragebogentyp auf Basis der Spalten "Evaluierungswunsch als Vorlesung" und "Evaluierungswunsch als Labor" definieren
+    def determine_lv_art(row):
+        vorlesung = str(row.get('Evaluierungswunsch als Vorlesung', '')).strip().lower()
+        labor = str(row.get('Evaluierungswunsch als Labor', '')).strip().lower()
+
+        if labor == 'ja':
+            return "Labor"
+        elif vorlesung == 'ja':
+            return "Vorlesung"
+        return "Unbekannt"
+
+    def determine_questionnaire_type(row):
+        vorlesung = str(row.get('Evaluierungswunsch als Vorlesung', '')).strip().lower()
+        labor = str(row.get('Evaluierungswunsch als Labor', '')).strip().lower()
+
+        if labor == 'ja':
+            return "HsH-Labor"
+        elif vorlesung == 'ja':
+            return "Evalu"
+        return "Unbekannt"
+
+    courses_data['LV-Art'] = courses_data.apply(determine_lv_art, axis=1)
+    courses_data['Fragebogentyp'] = courses_data.apply(determine_questionnaire_type, axis=1)
 
     # Duplikate entfernen
     courses_to_evaluate = courses_data.drop_duplicates(subset=['Moodle-Link'])
@@ -55,7 +78,10 @@ def prepare_evaluation_data(courses_data, output_dir):
     if output_dir:
         blacklist.to_csv(f"{output_dir}/blacklist.csv", index=False)
 
-    return courses_to_evaluate[courses_to_evaluate['Evaluierungswunsch'] == 'ja']
+    return courses_to_evaluate[
+        (courses_to_evaluate['Evaluierungswunsch als Vorlesung'].str.lower() == 'ja') |
+        (courses_to_evaluate['Evaluierungswunsch als Labor'].str.lower() == 'ja')
+    ]
 
 def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driver, professor_data):
     """
@@ -140,15 +166,15 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
             "LV-Kennung": lv_kennung,  # Generierte LV-Kennung
             "LV-Ort": row.get("LV-Ort", ""),
             "Studiengang": row.get("Studiengang", ""),
-            "LV-Art": 1 if 'vorlesung' in row.get("Veranstaltungsart", "").lower() or not row.get("Veranstaltungsart", "").strip() else 8,
+            "LV-Art": row.get("LV-Art", "Unbekannt"),  # Übernommen aus prepare_evaluation_data
             "Anzahl": participant_count,  # Anzahl der Teilnehmer
             "Sekundärdoz": None,  # Optional
-            "Fragebogentyp": "Evalu",  # Fragebogentyp (Standard)
+            "Fragebogentyp": row.get("Fragebogentyp", "Unbekannt"),  # Übernommen aus prepare_evaluation_data
             "Semester": row.get("Semester", "")
         }])], ignore_index=True)
 
     # Evaluationstabelle als CSV speichern
-    output_path = os.path.join(output_dir, "evaluation_table.csv")
+    output_path = os.path.join(output_dir, "Steuerdatei.csv")
     evaluation_table.to_csv(output_path, index=False)
 
     print(f"Evaluationstabelle wurde unter folgendem Pfad gespeichert: {output_path}")
