@@ -48,6 +48,8 @@ def prepare_evaluation_data(courses_data, output_dir):
         )
     ]
 
+    blacklist.to_csv(f"{output_dir}/blacklist.csv", index=False)
+
     # LV-Art und Fragebogentyp auf Basis der Spalten "Evaluierungswunsch als Vorlesung" und "Evaluierungswunsch als Labor" definieren
     def determine_lv_art(row):
         vorlesung = str(row.get('Evaluierungswunsch als Vorlesung', '')).strip().lower()
