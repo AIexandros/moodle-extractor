@@ -1,0 +1,11 @@
+Funktion,Anrede,Titel,Vorname,Nachname,E-Mail,LV-Name,LV-Kennung,LV-Ort,Studiengang,LV-Art,Anzahl,Sekundärdoz,Fragebogentyp,Semester
+Dozent,Herr,Prof.,Arno,Klose,arno.klose@hs-hannover.de,Aerodyn,ADY_AK,,ME2,1,27,,Evalu,WS 24/25
+Dozent,Herr,Prof. Dr.-Ing.,Emre,Çakar,emre.cakar@hs-hannover.de,AngewInform 1,AIN1_EC,,II2,8,25,,HSH-Labor,WS 24/25
+Dozent,Herr,Prof. Dr.-Ing.,Emre,Çakar,emre.cakar@hs-hannover.de,AlgDatStr,ALD_EC,,"MT3,II3,ID3",1,46,,Evalu,WS 24/25
+Dozent,Herr,Prof. Dr.,Andreas,Grünemaier,andreas.gruenemaier@hs-hannover.de,AngewProg,APG_AG,,WI3,8,0,,HSH-Labor,WS 24/25
+Dozent,Frau,Prof. Dr.,Corina,Jantke,corina.jantke@hs-hannover.de,Betriebsl G,BEL_CJ,,"M3B,II2",1,45,,Evalu,WS 24/25
+Dozent,Herr,Prof. Dr.-Ing.,Günter,Klawitter,guenter.klawitter@hs-hannover.de,CompgestAus,CGA_GK,,ME2,1,65,,Evalu,WS 24/25
+Dozent,Herr,Prof. Dr.,Sven,Köhler,sven.koehler@hs-hannover.de,Chemie,CHE_SK,,M1A,1,46,,Evalu,WS 24/25
+Dozent,Herr,B.Eng.,Sascha,Bode,sascha.bode@hs-hannover.de,CNC-Labor 1,CNL1_SB,,"PT5,PS4",8,13,,HSH-Labor,WS 24/25
+Dozent,Herr,Prof. Dr.-Ing.,Timo von,Marcard,timo.marcard@hs-hannover.de,Deep.Neur.N,DNN_TM,,VM2,1,17,,Evalu,WS 24/25
+Dozent,Herr,Prof. Dr.-Ing.,Carsten,Fräger,carsten.fraeger@hs-hannover.de,Elektr Antr,ELA_CF,,"VE4,PS4,ID5,AM4,MT5",1,97,,Evalu,WS 24/25

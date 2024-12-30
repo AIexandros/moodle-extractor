@@ -178,7 +178,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
     # Evaluationstabelle als CSV speichern
     output_path = os.path.join(output_dir, "Steuerdatei.csv")
     evaluation_table.to_csv(output_path, index=False)
-
+    
     print(f"Die Steuerdatei wurde unter folgendem Pfad gespeichert: {output_path}")
 
 
@@ -234,4 +234,3 @@ def generate_three_column_table(evaluation_table_path, participants_dir, output_
     # Tabelle speichern
     three_column_df.to_csv(output_file, index=False)
     print(f"Finale Tabelle wurde unter folgendem Pfad gespeichert: {output_file}")
-
