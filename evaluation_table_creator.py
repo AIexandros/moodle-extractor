@@ -178,5 +178,59 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
     # Evaluationstabelle als CSV speichern
     output_path = os.path.join(output_dir, "Steuerdatei.csv")
     evaluation_table.to_csv(output_path, index=False)
+    
+    print(f"Die Steuerdatei wurde unter folgendem Pfad gespeichert: {output_path}")
 
-    print(f"Evaluationstabelle wurde unter folgendem Pfad gespeichert: {output_path}")
+
+def generate_three_column_table(evaluation_table_path, participants_dir, output_file):
+    """
+    Generiert eine dreispaltige Tabelle mit LV-Kennung, Vor- und Nachname des Studenten, und E-Mail.
+
+    Parameter:
+        evaluation_table_path (str): Pfad zur Evaluationstabelle (CSV).
+        participants_dir (str): Verzeichnis mit Teilnehmerlisten (CSV-Dateien).
+        output_file (str): Pfad zur Ausgabe der dreispaltigen Tabelle.
+
+    Rückgabe:
+        None
+    """
+    # Evaluationstabelle laden
+    evaluation_table = pd.read_csv(evaluation_table_path)
+
+    # Liste zur Speicherung der Ergebnisse
+    three_column_data = []
+
+    # Verarbeitung der Evaluationstabelle
+    for _, row in evaluation_table.iterrows():
+        lv_kennung = row.get('LV-Kennung', 'Unbekannt')
+        course_name = row.get('LV-Name', '').replace(' ', '_')
+
+        # Teilnehmerliste für diesen Kurs laden
+        participants_file = os.path.join(participants_dir, f"participants_{course_name}.csv")
+        if os.path.exists(participants_file):
+            try:
+                participants_data = pd.read_csv(participants_file)
+
+                # Gehe jede Zeile der Teilnehmer durch
+                for _, student_row in participants_data.iterrows():
+                    student_name = f"{student_row.get('Vorname', 'Unbekannt')} {student_row.get('Nachname', 'Unbekannt')}"
+                    student_email = student_row.get('E-Mail-Adresse', 'Nicht verfügbar')
+
+                    # Daten hinzufügen
+                    three_column_data.append({
+                        "LV-Kennung": lv_kennung,
+                        "Student Name": student_name,
+                        "E-Mail": student_email
+                    })
+
+            except Exception as e:
+                print(f"Fehler beim Lesen der Teilnehmerliste {participants_file}: {e}")
+        else:
+            print(f"Keine Teilnehmerliste für {course_name} gefunden.")
+
+    # Tabelle erstellen
+    three_column_df = pd.DataFrame(three_column_data)
+
+    # Tabelle speichern
+    three_column_df.to_csv(output_file, index=False)
+    print(f"Finale Tabelle wurde unter folgendem Pfad gespeichert: {output_file}")
