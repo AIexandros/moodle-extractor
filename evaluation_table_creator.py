@@ -4,12 +4,7 @@ from difflib import get_close_matches
 from datetime import datetime
 
 def determine_current_semester():
-    """
-    Bestimmt das aktuelle Semester basierend auf dem aktuellen Datum.
-
-    Rückgabe:
-        str: Das aktuelle Semester im Format "SS xx" oder "WS xx/xx".
-    """
+    
     now = datetime.now()
     year = now.year
     if now.month >= 9:  # Wintersemester beginnt im September
@@ -20,17 +15,7 @@ def determine_current_semester():
         return f"WS {(year - 1) % 100}/{year % 100}"
 
 def prepare_evaluation_data(courses_data, output_dir):
-    """
-    Bereitet die Kursdaten für die Evaluation vor, einschließlich der Aggregation von Studiengängen,
-    der Zuordnung des aktuellen Semesters, der LV-Art und des Fragebogentyps.
-
-    Parameter:
-        courses_data (pd.DataFrame): Die ursprünglichen Kursdaten.
-        output_dir (str): Der Pfad zum Ausgabeverzeichnis.
-
-    Rückgabe:
-        pd.DataFrame: Die vorbereiteten Kursdaten zur Evaluation.
-    """
+    
     # Semester für alle Kurse setzen
     current_semester = determine_current_semester()
     courses_data['Semester'] = current_semester
@@ -86,19 +71,7 @@ def prepare_evaluation_data(courses_data, output_dir):
     ]
 
 def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driver, professor_data):
-    """
-    Erstellt eine Evaluationstabelle mit allen relevanten Kurs- und Dozentendaten.
 
-    Parameter:
-        courses_to_evaluate (pd.DataFrame): Gefilterte DataFrame mit Kursen zur Evaluation.
-        original_data (pd.DataFrame): Ursprüngliche Kursdaten.
-        output_dir (str): Verzeichnis, in dem die Tabelle gespeichert wird.
-        driver (webdriver): Selenium WebDriver-Instanz (optional, falls benötigt).
-        professor_data (pd.DataFrame): DataFrame mit Informationen über Dozenten.
-
-    Rückgabe:
-        None
-    """
     # Spalten für die Evaluationstabelle definieren
     columns = [
         "Funktion", "Anrede", "Titel", "Vorname", "Nachname", "E-Mail",
@@ -183,17 +156,7 @@ def create_evaluation_table(courses_to_evaluate, original_data, output_dir, driv
 
 
 def generate_three_column_table(evaluation_table_path, participants_dir, output_file):
-    """
-    Generiert eine dreispaltige Tabelle mit LV-Kennung, Vor- und Nachname des Studenten, und E-Mail.
 
-    Parameter:
-        evaluation_table_path (str): Pfad zur Evaluationstabelle (CSV).
-        participants_dir (str): Verzeichnis mit Teilnehmerlisten (CSV-Dateien).
-        output_file (str): Pfad zur Ausgabe der dreispaltigen Tabelle.
-
-    Rückgabe:
-        None
-    """
     # Evaluationstabelle laden
     evaluation_table = pd.read_csv(evaluation_table_path)
 
